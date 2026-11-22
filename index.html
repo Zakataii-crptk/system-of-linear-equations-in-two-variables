@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบสมการเชิงเส้นสองตัวแปร ม.3</title>
+
+<script>
+window.MathJax = {
+    tex: {
+        inlineMath: [["\\(", "\\)"]]
+    },
+    svg: {
+        fontCache: "global"
+    }
+};
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Tahoma, sans-serif;
+    color: #222;
+    background: #eef3fa;
+}
+
+.container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 30px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+h1, h2, h3 {
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 8px;
+    color: #2457a6;
+}
+
+h3 {
+    margin-top: 0;
+    color: #555;
+}
+
+input {
+    width: 100%;
+    margin: 10px 0;
+    padding: 14px;
+    font-size: 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+}
+
+input:focus {
+    outline: none;
+    border-color: #2d6cdf;
+    box-shadow: 0 0 0 3px rgba(45, 108, 223, 0.15);
+}
+
+button {
+    padding: 14px 24px;
+    font-size: 16px;
+    color: #ffffff;
+    cursor: pointer;
+    background: #2d6cdf;
+    border: none;
+    border-radius: 10px;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #1f56bd;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    background: #8a8a8a;
+}
+
+#examPage {
+    display: none;
+}
+
+.question-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    margin-top: 25px;
+    padding: 35px 25px;
+    overflow-x: auto;
+    font-size: 22px;
+    line-height: 1.9;
+    text-align: center;
+    background: #fafcff;
+    border: 2px solid #d7e1f1;
+    border-radius: 12px;
+}
+
+.question-content {
+    width: 100%;
+    max-width: 760px;
+}
+
+.question-content p {
+    margin: 12px 0;
+}
+
+.system-equation {
+    margin: 24px 0;
+    font-size: 26px;
+}
+
+.instruction-box {
+    width: 100%;
+    max-width: 650px;
+    font-size: 17px;
+    line-height: 1.8;
+    text-align: left;
+}
+
+.instruction-box h3 {
+    margin: 0 0 10px;
+    color: #2457a6;
+    text-align: center;
+}
+
+.instruction-box ul {
+    margin: 0;
+    padding-left: 25px;
+}
+
+.center {
+    margin-top: 22px;
+    text-align: center;
+}
+
+.terminated {
+    max-width: 700px;
+    margin: 100px auto;
+    padding: 30px;
+    text-align: center;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 600px) {
+    .container {
+        margin: 15px;
+        padding: 20px;
+    }
+
+    .question-box {
+        min-height: 280px;
+        padding: 25px 15px;
+        font-size: 18px;
+    }
+
+    .system-equation {
+        font-size: 22px;
+    }
+
+    .instruction-box {
+        font-size: 16px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div id="loginPage">
+        <h1>ระบบสมการเชิงเส้นสองตัวแปร</h1>
+        <h3>คณิตศาสตร์ ม.3</h3>
+
+        <input id="name" type="text" placeholder="ชื่อ - นามสกุล">
+        <input id="number" type="text" placeholder="เลขที่ / รหัสนักเรียน">
+
+        <div class="center">
+            <button onclick="startExam()">เริ่มทำแบบฝึกหัด</button>
+        </div>
+    </div>
+
+    <div id="examPage">
+        <h2>ระบบสมการเชิงเส้นสองตัวแปร</h2>
+
+        <p><b>ชื่อ:</b> <span id="studentName"></span></p>
+        <p><b>เลขที่:</b> <span id="studentNumber"></span></p>
+        <p><b>ข้อที่:</b> <span id="count">0</span> / 3</p>
+
+        <div id="questionBox" class="question-box"></div>
+
+        <div class="center">
+            <button id="nextButton" onclick="generateQuestion()">
+                เริ่มแสดงโจทย์ข้อที่ 1
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+let count = 0;
+let examStarted = false;
+let questionSet = [];
+
+/* สุ่มตำแหน่งข้อมูล */
+function randomIndex(max) {
+    const values = new Uint32Array(1);
+
+    if (window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(values);
+        return values[0] % max;
+    }
+
+    return Math.floor(Math.random() * max);
+}
+
+/* สุ่มจำนวนเต็มตั้งแต่ min ถึง max */
+function randomInt(min, max) {
+    return min + randomIndex(max - min + 1);
+}
+
+/* สุ่มสมาชิกจากอาร์เรย์ */
+function pickRandom(items) {
+    return items[randomIndex(items.length)];
+}
+
+/* ห.ร.ม. */
+function gcd(a, b) {
+    a = Math.abs(a);
+    b = Math.abs(b);
+
+    while (b !== 0) {
+        const temporary = b;
+        b = a % b;
+        a = temporary;
+    }
+
+    return a;
+}
+
+/* ตรวจสอบว่า ค.ร.น. ไม่มากเกินไป */
+function hasSuitableLCM(a, b) {
+    const lcm = Math.abs(a * b) / gcd(a, b);
+
+    return lcm <= 30;
+}
+
+/* แสดงพจน์ เช่น 3x, -2x, x */
+function variableTerm(coefficient, variable, isFirst) {
+    const absoluteValue = Math.abs(coefficient);
+    const numberPart = absoluteValue === 1 ? "" : absoluteValue;
+    const term = `${numberPart}${variable}`;
+
+    if (isFirst) {
+        return coefficient < 0 ? `-${term}` : term;
+    }
+
+    return coefficient < 0 ? ` - ${term}` : ` + ${term}`;
+}
+
+/* แปลงสมการ ax + by = c เป็น LaTeX */
+function equationToLatex(a, b, c) {
+    return (
+        variableTerm(a, "x", true) +
+        variableTerm(b, "y", false) +
+        ` = ${c}`
+    );
+}
+
+/* แสดงระบบสมการ */
+function systemToLatex(firstEquation, secondEquation) {
+    return (
+        `\\(\\begin{cases}` +
+        `${equationToLatex(
+            firstEquation.a,
+            firstEquation.b,
+            firstEquation.c
+        )}` +
+        `\\\\[8pt]` +
+        `${equationToLatex(
+            secondEquation.a,
+            secondEquation.b,
+            secondEquation.c
+        )}` +
+        `\\end{cases}\\)`
+    );
+}
+
+/*
+    ข้อ 1:
+    สุ่มให้กำจัด x หรือ y ได้ทันที
+    - กรณีสัมประสิทธิ์เท่ากัน ใช้วิธีลบสมการ
+    - กรณีสัมประสิทธิ์ตรงข้ามกัน ใช้วิธีบวกสมการ
+*/
+function createDirectEliminationQuestion() {
+    const coefficients = [
+        -6, -5, -4, -3, -2, -1,
+        1, 2, 3, 4, 5, 6
+    ];
+
+    let x;
+    let y;
+    let commonCoefficient;
+    let firstOtherCoefficient;
+    let secondOtherCoefficient;
+    let eliminateVariable;
+    let operationType;
+
+    let firstEquation;
+    let secondEquation;
+
+    do {
+        x = randomInt(-8, 8);
+        y = randomInt(-8, 8);
+
+        commonCoefficient = pickRandom(coefficients);
+        firstOtherCoefficient = pickRandom(coefficients);
+        secondOtherCoefficient = pickRandom(coefficients);
+
+        eliminateVariable = pickRandom(["x", "y"]);
+        operationType = pickRandom(["add", "subtract"]);
+
+        if (eliminateVariable === "x") {
+            const secondXCoefficient =
+                operationType === "add"
+                    ? -commonCoefficient
+                    : commonCoefficient;
+
+            firstEquation = {
+                a: commonCoefficient,
+                b: firstOtherCoefficient,
+                c: commonCoefficient * x +
+                    firstOtherCoefficient * y
+            };
+
+            secondEquation = {
+                a: secondXCoefficient,
+                b: secondOtherCoefficient,
+                c: secondXCoefficient * x +
+                    secondOtherCoefficient * y
+            };
+        } else {
+            const secondYCoefficient =
+                operationType === "add"
+                    ? -commonCoefficient
+                    : commonCoefficient;
+
+            firstEquation = {
+                a: firstOtherCoefficient,
+                b: commonCoefficient,
+                c: firstOtherCoefficient * x +
+                    commonCoefficient * y
+            };
+
+            secondEquation = {
+                a: secondOtherCoefficient,
+                b: secondYCoefficient,
+                c: secondOtherCoefficient * x +
+                    secondYCoefficient * y
+            };
+        }
+    } while (
+        firstEquation.a * secondEquation.b ===
+        secondEquation.a * firstEquation.b
+    );
+
+    const system = systemToLatex(firstEquation, secondEquation);
+
+    return {
+        key:
+            `${eliminateVariable}-${operationType}-` +
+            `${firstEquation.a}-${firstEquation.b}-` +
+            `${secondEquation.a}-${secondEquation.b}-` +
+            `${x}-${y}`,
+        text: `
+            <div class="question-content">
+                <p>จงแก้ระบบสมการเชิงเส้นสองตัวแปรต่อไปนี้</p>
+                <div class="system-equation">${system}</div>
+            </div>
+        `
+    };
+}
+
+/*
+    ข้อ 2:
+    สัมประสิทธิ์หน้า x และ y ของทั้งสองสมการไม่เท่ากัน
+    ต้องทำให้สัมประสิทธิ์ของตัวแปรหนึ่งเท่ากันก่อน
+    จากนั้นอาจต้องบวกหรือลบสมการเพื่อกำจัดตัวแปร
+*/
+function createMultiplierEliminationQuestion() {
+    const coefficientValues = [
+        -6, -5, -4, -3, -2,
+        2, 3, 4, 5, 6
+    ];
+
+    let x;
+    let y;
+    let a1;
+    let a2;
+    let b1;
+    let b2;
+
+    do {
+        x = randomInt(-6, 8);
+        y = randomInt(-6, 8);
+
+        a1 = pickRandom(coefficientValues);
+        a2 = pickRandom(coefficientValues);
+        b1 = pickRandom(coefficientValues);
+        b2 = pickRandom(coefficientValues);
+    } while (
+        Math.abs(a1) === Math.abs(a2) ||
+        Math.abs(b1) === Math.abs(b2) ||
+        a1 * b2 === a2 * b1 ||
+        !hasSuitableLCM(a1, a2) ||
+        !hasSuitableLCM(b1, b2)
+    );
+
+    const firstEquation = {
+        a: a1,
+        b: b1,
+        c: a1 * x + b1 * y
+    };
+
+    const secondEquation = {
+        a: a2,
+        b: b2,
+        c: a2 * x + b2 * y
+    };
+
+    const system = systemToLatex(firstEquation, secondEquation);
+
+    return {
+        key: `${a1},${b1},${a2},${b2},${x},${y}`,
+        text: `
+            <div class="question-content">
+                <p>จงแก้ระบบสมการเชิงเส้นสองตัวแปรต่อไปนี้</p>
+                <div class="system-equation">${system}</div>
+            </div>
+        `
+    };
+}
+
+/*
+    ข้อ 3:
+    โจทย์ปัญหาในชีวิตประจำวัน
+*/
+function createWordProblemQuestion() {
+    const problemType = randomIndex(5);
+
+    /* โจทย์บัตรเข้าชม */
+    if (problemType === 0) {
+        const adultPrice = pickRandom([80, 100, 120, 150]);
+        const studentPrice = pickRandom([30, 40, 50, 60]);
+
+        const adultCount = randomInt(4, 16);
+        const studentCount = randomInt(5, 22);
+
+        const totalPeople = adultCount + studentCount;
+        const totalMoney =
+            adultPrice * adultCount +
+            studentPrice * studentCount;
+
+        return {
+            key:
+                `ticket-${adultPrice}-${studentPrice}-` +
+                `${adultCount}-${studentCount}`,
+            text: `
+                <div class="question-content">
+                    <p>
+                        ร้านจัดกิจกรรมแห่งหนึ่งจำหน่ายบัตรผู้ใหญ่ใบละ
+                        \\(${adultPrice}\\) บาท และบัตรนักเรียนใบละ
+                        \\(${studentPrice}\\) บาท
+                    </p>
+                    <p>
+                        ในวันหนึ่งขายบัตรได้ทั้งหมด \\(${totalPeople}\\) ใบ
+                        เป็นเงินทั้งหมด \\(${totalMoney}\\) บาท
+                    </p>
+                    <p>
+                        จงหาว่าขายบัตรผู้ใหญ่และบัตรนักเรียนได้อย่างละกี่ใบ
+                    </p>
+                </div>
+            `
+        };
+    }
+
+    /* โจทย์ไก่และกระต่าย */
+    if (problemType === 1) {
+        const chickenCount = randomInt(4, 18);
+        const rabbitCount = randomInt(3, 15);
+
+        const totalHeads = chickenCount + rabbitCount;
+        const totalLegs = 2 * chickenCount + 4 * rabbitCount;
+
+        return {
+            key: `animal-${chickenCount}-${rabbitCount}`,
+            text: `
+                <div class="question-content">
+                    <p>
+                        ฟาร์มแห่งหนึ่งมีไก่และกระต่ายรวมกัน
+                        \\(${totalHeads}\\) ตัว
+                    </p>
+                    <p>
+                        เมื่อนับจำนวนขาทั้งหมด พบว่ามี \\(${totalLegs}\\) ขา
+                    </p>
+                    <p>
+                        จงหาว่าฟาร์มแห่งนี้มีไก่และกระต่ายอย่างละกี่ตัว
+                    </p>
+                </div>
+            `
+        };
+    }
+
+    /* โจทย์สมุดและปากกา */
+    if (problemType === 2) {
+        const notebookPrice = pickRandom([12, 15, 18, 20]);
+        const penPrice = pickRandom([5, 6, 7, 8]);
+
+        const notebookCount = randomInt(3, 14);
+        const penCount = randomInt(4, 18);
+
+        const totalItems = notebookCount + penCount;
+        const totalMoney =
+            notebookPrice * notebookCount +
+            penPrice * penCount;
+
+        return {
+            key:
+                `stationery-${notebookPrice}-${penPrice}-` +
+                `${notebookCount}-${penCount}`,
+            text: `
+                <div class="question-content">
+                    <p>
+                        ร้านเครื่องเขียนขายสมุดเล่มละ \\(${notebookPrice}\\) บาท
+                        และปากกาด้ามละ \\(${penPrice}\\) บาท
+                    </p>
+                    <p>
+                        นักเรียนคนหนึ่งซื้อสมุดและปากการวมกัน
+                        \\(${totalItems}\\) ชิ้น เป็นเงินทั้งหมด
+                        \\(${totalMoney}\\) บาท
+                    </p>
+                    <p>
+                        จงหาว่าซื้อสมุดและปากกาอย่างละกี่ชิ้น
+                    </p>
+                </div>
+            `
+        };
+    }
+
+    /* โจทย์เหรียญ */
+    if (problemType === 3) {
+        const fiveCoinCount = randomInt(4, 20);
+        const tenCoinCount = randomInt(3, 18);
+
+        const totalCoins = fiveCoinCount + tenCoinCount;
+        const totalMoney =
+            5 * fiveCoinCount +
+            10 * tenCoinCount;
+
+        return {
+            key: `coin-${fiveCoinCount}-${tenCoinCount}`,
+            text: `
+                <div class="question-content">
+                    <p>
+                        กระปุกออมสินใบหนึ่งมีเหรียญ 5 บาท และเหรียญ 10 บาท
+                        รวมกัน \\(${totalCoins}\\) เหรียญ
+                    </p>
+                    <p>
+                        เหรียญทั้งหมดมีมูลค่ารวม \\(${totalMoney}\\) บาท
+                    </p>
+                    <p>
+                        จงหาว่ามีเหรียญ 5 บาท และเหรียญ 10 บาทอย่างละกี่เหรียญ
+                    </p>
+                </div>
+            `
+        };
+    }
+
+    /* โจทย์รถจักรยานยนต์และรถยนต์ */
+    const motorcycleCount = randomInt(4, 20);
+    const carCount = randomInt(3, 15);
+
+    const totalVehicles = motorcycleCount + carCount;
+    const totalWheels =
+        2 * motorcycleCount +
+        4 * carCount;
+
+    return {
+        key: `vehicle-${motorcycleCount}-${carCount}`,
+        text: `
+            <div class="question-content">
+                <p>
+                    ลานจอดรถแห่งหนึ่งมีรถจักรยานยนต์และรถยนต์รวมกัน
+                    \\(${totalVehicles}\\) คัน
+                </p>
+                <p>
+                    เมื่อนับจำนวนล้อทั้งหมด พบว่ามี \\(${totalWheels}\\) ล้อ
+                </p>
+                <p>
+                    จงหาว่ามีรถจักรยานยนต์และรถยนต์อย่างละกี่คัน
+                </p>
+            </div>
+        `
+    };
+}
+
+/* สร้างคลังโจทย์แบบไม่ซ้ำ */
+function createQuestionBank(createQuestion, totalQuestions) {
+    const bank = [];
+    const usedKeys = new Set();
+
+    while (bank.length < totalQuestions) {
+        const question = createQuestion();
+
+        if (usedKeys.has(question.key)) {
+            continue;
+        }
+
+        usedKeys.add(question.key);
+        bank.push(question.text);
+    }
+
+    return bank;
+}
+
+/*
+    คลังโจทย์รวม 500 ข้อ
+    - ข้อ 1 จำนวน 150 ข้อ
+    - ข้อ 2 จำนวน 150 ข้อ
+    - ข้อ 3 จำนวน 200 ข้อ
+*/
+const questionBank = {
+    directElimination: createQuestionBank(
+        createDirectEliminationQuestion,
+        150
+    ),
+    multiplierElimination: createQuestionBank(
+        createMultiplierEliminationQuestion,
+        150
+    ),
+    wordProblem: createQuestionBank(
+        createWordProblemQuestion,
+        200
+    )
+};
+
+/* สุ่มเลือกโจทย์ */
+function pickRandomQuestion(questionGroup) {
+    return questionGroup[randomIndex(questionGroup.length)];
+}
+
+/* สร้างชุดโจทย์ 3 ข้อ */
+function createRandomQuestionSet() {
+    return [
+        pickRandomQuestion(questionBank.directElimination),
+        pickRandomQuestion(questionBank.multiplierElimination),
+        pickRandomQuestion(questionBank.wordProblem)
+    ];
+}
+
+/* แสดงคำชี้แจง */
+function showInstructions() {
+    const questionBox = document.getElementById("questionBox");
+
+    questionBox.innerHTML = `
+        <div class="instruction-box">
+            <h3>คำชี้แจง</h3>
+            <ul>
+                <li>แบบฝึกหัดมีทั้งหมด 3 ข้อ</li>
+                <li>ระบบจะแสดงโจทย์ครั้งละ 1 ข้อ</li>
+                <li>เขียนวิธีทำและคำตอบลงในสมุดหรือกระดาษคำตอบ</li>
+                <li>เมื่อพร้อมแล้ว ให้กดปุ่ม “เริ่มแสดงโจทย์ข้อที่ 1”</li>
+            </ul>
+        </div>
+    `;
+
+    typesetQuestion();
+}
+
+/* เริ่มทำแบบฝึกหัด */
+function startExam() {
+    const name = document.getElementById("name").value.trim();
+    const number = document.getElementById("number").value.trim();
+
+    if (!name || !number) {
+        alert("กรุณากรอกชื่อและเลขที่ / รหัสนักเรียนให้ครบถ้วน");
+        return;
+    }
+
+    count = 0;
+    examStarted = true;
+    questionSet = createRandomQuestionSet();
+
+    document.getElementById("studentName").textContent = name;
+    document.getElementById("studentNumber").textContent = number;
+    document.getElementById("count").textContent = "0";
+
+    document.getElementById("nextButton").disabled = false;
+    document.getElementById("nextButton").textContent =
+        "เริ่มแสดงโจทย์ข้อที่ 1";
+
+    document.getElementById("loginPage").style.display = "none";
+    document.getElementById("examPage").style.display = "block";
+
+    showInstructions();
+    history.pushState(null, "", location.href);
+}
+
+/* จัดรูปสมการด้วย MathJax */
+function typesetQuestion() {
+    const questionBox = document.getElementById("questionBox");
+
+    if (window.MathJax && typeof MathJax.typesetPromise === "function") {
+        MathJax.typesetClear([questionBox]);
+        MathJax.typesetPromise([questionBox]).catch(function() {});
+    }
+}
+
+/* แสดงโจทย์ข้อถัดไป */
+function generateQuestion() {
+    if (count >= 3) {
+        return;
+    }
+
+    const question = questionSet[count];
+    count++;
+
+    document.getElementById("count").textContent = count;
+    document.getElementById("questionBox").innerHTML = question;
+
+    typesetQuestion();
+
+    const nextButton = document.getElementById("nextButton");
+
+    if (count < 3) {
+        nextButton.textContent = "แสดงโจทย์ข้อถัดไป";
+    } else {
+        nextButton.disabled = true;
+        nextButton.textContent = "ครบ 3 ข้อแล้ว";
+    }
+}
+
+/* สิ้นสุดแบบฝึกหัด */
+function terminateExam(message) {
+    examStarted = false;
+
+    document.body.innerHTML = `
+        <div class="terminated">
+            <h1 style="color:#c62828;">สิ้นสุดการทำแบบฝึกหัด</h1>
+            <p>${message}</p>
+        </div>
+    `;
+}
+
+/* ตรวจจับการเปลี่ยนแท็บ */
+document.addEventListener("visibilitychange", function() {
+    if (examStarted && document.hidden) {
+        terminateExam("ตรวจพบการเปลี่ยนแท็บหรือออกจากหน้าต่างแบบฝึกหัด");
+    }
+});
+
+/* ตรวจจับการเปลี่ยนหน้าต่าง */
+window.addEventListener("blur", function() {
+    if (examStarted) {
+        terminateExam("ตรวจพบการเปลี่ยนหน้าต่าง");
+    }
+});
+
+/* ป้องกันการรีเฟรชหน้าเว็บ */
+document.addEventListener("keydown", function(event) {
+    if (!examStarted) {
+        return;
+    }
+
+    const isRefresh =
+        event.key === "F5" ||
+        ((event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "r");
+
+    if (isRefresh) {
+        event.preventDefault();
+        terminateExam("ตรวจพบการรีเฟรชหน้าเว็บ");
+    }
+});
+
+/* แจ้งเตือนก่อนออกจากหน้า */
+window.addEventListener("beforeunload", function(event) {
+    if (examStarted) {
+        event.preventDefault();
+        event.returnValue = "";
+    }
+});
+
+/* ตรวจจับการกดย้อนกลับ */
+window.addEventListener("popstate", function() {
+    if (examStarted) {
+        terminateExam("ตรวจพบการกดย้อนกลับ");
+    }
+});
+</script>
+
+</body>
+</html>
